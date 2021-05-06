@@ -3,7 +3,6 @@ import numpy as np
 from typing import List, Set, Dict, Tuple, Optional
 from dataclasses import dataclass
 from amazons.constants import *
-import pygame.draw
 from pathlib import Path
 
 
@@ -131,26 +130,32 @@ class Board:
     #
     #     return is_valid
 
-    def _empty_between_squares(self, start: Coordinate, end: Coordinate, inclusive: bool = False) -> bool:
+    def empty_between_squares(self, start: Coordinate, end: Coordinate,
+                              include_start: bool = False, include_end: bool = False) -> bool:
         """Determine if the path between two squares is empty
         :param start: where to start checking
         :param end: where to stop checking
-        :param inclusive: if True, include the start and end point in check, otherwise only check the squares between
+        :param include_start: if True, include the start point in check, i.e. make sure it's empty too
+        :param include_end: if True, include the end point in check, i.e. make sure it's empty too
         :return: True if the path between two squares is empty, otherwise False
         """
         is_empty = True
         current_square = start
-        unit_step: Distance = (start - end).unit_step
+        try:
+            unit_step: Distance = (end - start).unit_step
+        except RuntimeError:
+            return False
         while current_square != end:
             current_square += unit_step
-            is_empty &= self.get_square_value(current_square) == EMPTY
+            is_empty &= self.square_is_empty(current_square)
 
-        if inclusive:
-            is_empty &= self.get_square_value(start) == EMPTY
-            is_empty &= self.get_square_value(end) == EMPTY
+        if include_start:
+            is_empty &= self.square_is_empty(start)
+        if include_end:
+            is_empty &= self.square_is_empty(end)
         return is_empty
 
-    def move(self, start: Coordinate, end: Coordinate, burn: Coordinate) -> None:
+    def move_and_burn(self, start: Coordinate, end: Coordinate, burn: Coordinate) -> None:
         """Moves an Amazon and burns a square as well
         :param start: square to start moving the Amazon from
         :param end: square to end moving the Amazon to
@@ -161,6 +166,18 @@ class Board:
         self.set_square_value(start, EMPTY)
         self.set_square_value(end, value)
         self.set_square_value(burn, BURNT)
+
+    def move(self, start: Coordinate, end: Coordinate) -> None:
+        """Moves and Amazon but requires calling burn aftwerwards to finish a move
+        :param start: square to start moving the Amazon from
+        :param end: square to end moving the Amazon to
+        """
+        value = self.get_square_value(start)
+        self.set_square_value(start, EMPTY)
+        self.set_square_value(end, value)
+
+    def burn(self, square: Coordinate) -> None:
+        self.set_square_value(square, BURNT)
 
     def get_white_amazon_positions(self):
         return np.where(self._state == WHITE_AMAZON)

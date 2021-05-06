@@ -12,7 +12,7 @@ class GUI:
         self.display_surface = display_surface
         self.board = board
         self.grid_size = int(np.min([self.display_surface.get_size()[0] / self.board.width,
-                                self.display_surface.get_size()[1] / self.board.height]))
+                                     self.display_surface.get_size()[1] / self.board.height]))
 
         assets_root = Path.cwd() / "assets"
         self.white_amazon_image = pygame.image.load(assets_root / "icons8-queen-100_white.png")
@@ -48,12 +48,12 @@ class GUI:
         for i, j in zip(*self.board.get_white_amazon_positions()):
             x = self.grid_size * i
             y = self.grid_size * j
-            self.white_amazon_rects.append(self.display_surface.blit(self.white_amazon_image, (x, y)))
+            self.white_amazon_rects.append(self.display_surface.blit(self.white_amazon_image, (y, x)))
 
         for i, j in zip(*self.board.get_black_amazon_positions()):
             x = self.grid_size * i
             y = self.grid_size * j
-            self.black_amazon_rects.append(self.display_surface.blit(self.black_amazon_image, (x, y)))
+            self.black_amazon_rects.append(self.display_surface.blit(self.black_amazon_image, (y, x)))
 
     def _draw_pieces(self):
         for rect in self.white_amazon_rects:
@@ -84,40 +84,54 @@ class GUI:
         pygame.display.flip()
 
     def event_handler(self, display_surface):
-        dragging = False
         for event in pygame.event.get():
             if event.type == QUIT:
                 pygame.quit()
                 sys.exit()
-            elif event.type == MOUSEBUTTONDOWN:
-                if event.button == 1:
-                    print(event.pos)
-                    if not self.burning:
-                        for amazon_rect in self.white_amazon_rects + self.black_amazon_rects:
-                            if amazon_rect.collidepoint(event.pos):
-                                self.dragging = True
-                                self.selected = amazon_rect
-                                mouse_x, mouse_y = event.pos
-                                self.offset_x = amazon_rect.x - mouse_x
-                                self.offset_y = amazon_rect.y - mouse_y
-                                self.start = self._calculate_closest_square(event.pos)
-                    else:  # we are burning
-                        self.burn = self._calculate_closest_square(event.pos)
-                        self.board.move(Coordinate(*self.start), Coordinate(*self.end), Coordinate(*self.burn))
+            elif event.type == MOUSEBUTTONDOWN and event.button == 1:
+                if not self.burning:
+                    for amazon_rect in self.white_amazon_rects + self.black_amazon_rects:
+                        if amazon_rect.collidepoint(event.pos):
+                            self.dragging = True
+                            self.selected = amazon_rect
+                            mouse_x, mouse_y = event.pos
+                            self.offset_x = amazon_rect.x - mouse_x
+                            self.offset_y = amazon_rect.y - mouse_y
+                            self.start = self._calculate_closest_square(event.pos)
+                else:  # we are burning
+                    self.burn = self._calculate_closest_square(event.pos)
+                    print(self.end, self.burn,
+                          self.board.empty_between_squares(Coordinate(*self.end), Coordinate(*self.burn),
+                                                           include_end=True))
+                    if self.board.empty_between_squares(Coordinate(*self.end), Coordinate(*self.burn),
+                                                        include_end=True):
+                        self.board.burn(Coordinate(*self.burn))
                         self.start, self.end, self.burn = None, None, None
                         self.burning = False
+                        print(self.board)
+                    else:
+                        self.burn = None
             elif event.type == MOUSEBUTTONUP:
                 if event.button == 1 and self.dragging:
-                    self._snap_selected_to_grid(self._calculate_closest_square(event.pos))
-                    self.end = self._calculate_closest_square(event.pos)
-                    self.dragging = False
-                    self.selected = None
-                    self.burning = True
-                    print("end = ", event.pos, )
+                    closest_square = self._calculate_closest_square(event.pos)
+                    if self.board.empty_between_squares(Coordinate(*self.start), Coordinate(*closest_square),
+                                                        include_end=True):
+                        self._snap_selected_to_grid(closest_square)
+                        self.end = closest_square
+                        self.dragging = False
+                        self.selected = None
+                        self.burning = True
+                        self.board.move(Coordinate(*self.start), Coordinate(*self.end))
+                    else:
+                        self._snap_selected_to_grid(self.start)
+                        self.start = None
+                        self.end = None
+                        self.dragging = False
+                        self.selected = None
+                        self.burning = False
             elif event.type == MOUSEMOTION:
                 if self.dragging:
                     self.selected.x = event.pos[0] + self.offset_x
                     self.selected.y = event.pos[1] + self.offset_y
-                    print(event.pos)
                 if self.burning:
                     pass
