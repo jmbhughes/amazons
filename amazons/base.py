@@ -13,15 +13,30 @@ class Coordinate:
     y: int
 
     def is_on_board(self, board: Board) -> bool:
+        """Checks if a given coordinate is on a board
+        :param board: board to compare to
+        :return: True if coordinate is on board, false otherwise
+        """
         return (0 <= self.x < board.width) and (0 <= self.y < board.height)
 
     def __sub__(self, other: Coordinate) -> Distance:
+        """Subtract two coordinates to get a distance
+        :param other: the other coordinate
+        :return: the resulting distance between coordinates
+        """
         return Distance(self.x - other.x, self.y - other.y)
 
     def __add__(self, other: Distance) -> Coordinate:
+        """Add a distance to a coordinate to get the new coordinate
+        :param other: the distance to add
+        :return: a resulting total coordinate
+        """
         return Coordinate(self.x + other.x, self.y + other.y)
 
     def __str__(self) -> str:
+        """Simple string representation
+        :return: a simple string representation
+        """
         return f"({self.x}, {self.y})"
 
 
@@ -60,6 +75,9 @@ class Distance:
         return (self.x != 0) and (self.y != 0) and np.abs(self.x) == np.abs(self.y)
 
     def __str__(self) -> str:
+        """Represent as a string
+        :return: simple string representation
+        """
         return f"({self.x}, {self.y})"
 
 
@@ -71,6 +89,9 @@ class Board:
         self._state: np.ndarray = np.zeros((self.height, self.width), dtype=np.uint8)
 
     def __str__(self) -> str:
+        """A simple string representation of a board
+        :return: string representation of a board
+        """
         out: str = ""
         for row in self._state:
             for value in row:
@@ -87,7 +108,12 @@ class Board:
         return self._state[coordinate.y, coordinate.x] == EMPTY
 
     def set_square_value(self, coordinate: Coordinate, value: int) -> None:
+        """Update the value of a square
+        :param coordinate: the coordinate of a square to update
+        :param value: the value to update
+        """
         assert value in [EMPTY, BURNT, WHITE_AMAZON, BLACK_AMAZON]
+        assert coordinate.is_on_board(self)
         self._state[coordinate.y, coordinate.x] = value
 
     def get_square_value(self, coordinate: Coordinate) -> int:
@@ -177,10 +203,20 @@ class Board:
         self.set_square_value(end, value)
 
     def burn(self, square: Coordinate) -> None:
+        """
+        Burn a square so that a piece can no longer move there
+        :param square: coordinate fot which square to burn
+        """
         self.set_square_value(square, BURNT)
 
     def get_white_amazon_positions(self):
+        """Determines where the white Amazons are
+        :return: two ndarray where the first is the x positions and the second is the y positions
+        """
         return np.where(self._state == WHITE_AMAZON)
 
     def get_black_amazon_positions(self):
+        """Determines where the black amazons are
+        :return: two ndarray where the first is the x positions and the second is the y positions
+        """
         return np.where(self._state == BLACK_AMAZON)

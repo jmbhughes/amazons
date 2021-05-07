@@ -32,8 +32,8 @@ if __name__ == "__main__":
 
     # Game Loop
     while True:
-        gui.update(display_surface)
-        gui.event_handler(display_surface)
+        gui.update()
+        gui.event_handler()
         pygame.display.update()
         clock.tick(FPS)
 
